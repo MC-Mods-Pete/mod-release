@@ -1,0 +1,180 @@
+# Publishes one or more mod branches to Modrinth and CurseForge and tags them on GitHub.
+# Started by mc-release (mod-tools) or by hand: Actions → Publish → Run workflow.
+# The jar is always attached to the run as an artifact (mc-release archives it on the Synology).
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: 'Targets, e.g. "UndeadNights@26.3-Fabric UndeadNights@26.3-NeoForge"'
+        required: true
+      type:
+        description: Release type
+        type: choice
+        options: [release, beta, alpha]
+        default: release
+      dry_run:
+        description: Only build and check, upload nothing
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        env:
+          TARGETS: ${{ inputs.targets }}
+        run: |
+          json=$(printf '%s\n' $TARGETS | jq -R 'split("@") | {mod: .[0], branch: .[1]}' | jq -sc '{include: .}')
+          echo "matrix=$json" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: plan
+    name: ${{ matrix.mod }}@${{ matrix.branch }}
+    runs-on: ubuntu-latest
+    environment: release
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      MOD: ${{ matrix.mod }}
+      BRANCH: ${{ matrix.branch }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: release
+
+      - name: Read mod from mods.yml
+        id: cfg
+        run: |
+          q() { yq -r ".[strenv(MOD)]$1 // \"\"" release/mods.yml; }
+          repo=$(q .repo)
+          [ -n "$repo" ] || { echo "::error::$MOD missing in mods.yml"; exit 1; }
+          {
+            echo "repo=$repo"
+            echo "modrinth=$(q .modrinth)"
+            echo "curseforge=$(q .curseforge)"
+            echo "game_versions=$(yq -r '.[strenv(MOD)].branches[strenv(BRANCH)].game_versions // [] | join(" ")' release/mods.yml)"
+            echo "java=$(yq -r '.[strenv(MOD)].branches[strenv(BRANCH)].java // ""' release/mods.yml)"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.cfg.outputs.repo }}
+          ref: ${{ matrix.branch }}
+          path: mod
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PAT || github.token }}
+
+      - name: Check version
+        id: meta
+        working-directory: mod
+        run: |
+          prop() { sed -nE "s/^\s*$1\s*=\s*(.*\S)\s*$/\1/p" gradle.properties | head -1; }
+          version=$(prop mod_version)
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(Forge|NeoForge|Fabric)-mc(.+)$ ]]; then
+            echo "::error::mod_version '$version' does not match the pattern x.y.z-Loader-mcVersion"; exit 1
+          fi
+          loader=${BASH_REMATCH[1],,}
+          mc=$(prop minecraft_version); mc=${mc:-${BASH_REMATCH[2]}}
+          tag="v$version"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "::error::tag $tag already exists, this version was already published"; exit 1
+          fi
+          java='${{ steps.cfg.outputs.java }}'
+          if [ -z "$java" ]; then
+            case "$mc" in
+              1.[0-9].*|1.1[0-6]|1.1[0-6].*)  java=8  ;;
+              1.17*|1.18*|1.19*|1.20|1.20.[0-4]) java=17 ;;
+              1.20.*|1.21*)                   java=21 ;;
+              *)                              java=25 ;;
+            esac
+          fi
+          gv='${{ steps.cfg.outputs.game_versions }}'
+          {
+            echo "version=$version"; echo "loader=$loader"; echo "mc=$mc"; echo "tag=$tag"
+            echo "java=$java"; echo "game_versions=${gv:-$mc}"
+          } >> "$GITHUB_OUTPUT"
+          echo "$MOD $version | Loader $loader | MC ${gv:-$mc} | Java $java | Tag $tag" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Changelog
+        id: log
+        working-directory: mod
+        env:
+          V: ${{ steps.meta.outputs.version }}
+        run: |
+          text=""
+          if [ -f changelog.txt ]; then
+            text=$(awk -v v="$V" '
+              /^-+$/ { if (prev == v) { on=1; have=0; next } if (on) { done=1; exit } }
+              on { if (have) print prev; prev=$0; have=1; next }
+              { prev=$0 }
+              END { if (on && !done && have) print prev }' changelog.txt)
+          fi
+          if [ -z "$text" ]; then
+            echo "::warning::no section '$V' in changelog.txt, using the commits since the last tag"
+            last=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
+            text=$(git log --no-merges --pretty='- %s' ${last:+$last..HEAD})
+          fi
+          { echo "text<<EOF_CHANGELOG"; echo "$text"; echo "EOF_CHANGELOG"; } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ steps.meta.outputs.java }}
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        working-directory: mod
+        run: |
+          chmod +x gradlew
+          ./gradlew build --no-daemon
+          jar=$(ls build/libs/*.jar | grep -vE -- '-(sources|dev|javadoc|slim|all)\.jar$' | head -1)
+          [ -n "$jar" ] || { echo "::error::no jar in build/libs"; exit 1; }
+          echo "JAR=mod/$jar" >> "$GITHUB_ENV"
+          echo "Jar: $jar" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload jar as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.mod }}-${{ steps.meta.outputs.version }}
+          path: ${{ env.JAR }}
+
+      - name: Publish to Modrinth and CurseForge
+        id: up
+        if: ${{ !inputs.dry_run }}
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: ${{ steps.cfg.outputs.modrinth }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          curseforge-id: ${{ steps.cfg.outputs.curseforge }}
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          files: ${{ env.JAR }}
+          name: ${{ matrix.mod }} ${{ steps.meta.outputs.version }}
+          version: ${{ steps.meta.outputs.version }}
+          version-type: ${{ inputs.type }}
+          loaders: ${{ steps.meta.outputs.loader }}
+          game-versions: ${{ steps.meta.outputs.game_versions }}
+          java: ${{ steps.meta.outputs.java }}
+          changelog: ${{ steps.log.outputs.text }}
+
+      - name: Create tag
+        if: ${{ !inputs.dry_run }}
+        working-directory: mod
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          MR: ${{ steps.up.outputs.modrinth-url }}
+          CF: ${{ steps.up.outputs.curseforge-url }}
+        run: |
+          git config user.name "MC-Mods-Pete"
+          git config user.email "MC-Mods-Pete@users.noreply.github.com"
+          git tag -a "$TAG" -m "$MOD ${TAG#v}" -m "Modrinth: $MR" -m "CurseForge: $CF"
+          git push origin "$TAG"
