@@ -105,7 +105,10 @@ jobs:
           gv='${{ steps.cfg.outputs.game_versions }}'
           {
             echo "version=$version"; echo "loader=$loader"; echo "mc=$mc"; echo "tag=$tag"
-            echo "java=$java"; echo "build_java=$build_java"; echo "game_versions=${gv:-$mc}"
+            echo "java=$java"; echo "build_java=$build_java"
+            # one version per line: mc-publish reads a space-separated value as ONE version range
+            # ("26.1 26.1.1" matches nothing, CurseForge then refuses the upload)
+            echo "game_versions<<EOF_GV"; printf '%s\n' ${gv:-$mc}; echo "EOF_GV"
           } >> "$GITHUB_OUTPUT"
           echo "$MOD $version | Loader $loader | MC ${gv:-$mc} | Java $java (build $build_java) | Tag $tag" >> "$GITHUB_STEP_SUMMARY"
 
