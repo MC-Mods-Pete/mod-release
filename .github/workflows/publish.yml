@@ -82,6 +82,8 @@ jobs:
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(Forge|NeoForge|Fabric)-mc(.+)$ ]]; then
             echo "::error::mod_version '$version' does not match the pattern x.y.z-Loader-mcVersion"; exit 1
           fi
+          # display name on Modrinth and CurseForge: "1.1.1 (Fabric 26.1.2)" = mod version (loader + MC part of mod_version)
+          title="${version%%-*} (${BASH_REMATCH[1]} ${BASH_REMATCH[2]})"
           loader=${BASH_REMATCH[1],,}
           mc=$(prop minecraft_version); mc=${mc:-${BASH_REMATCH[2]}}
           tag="v$version"
@@ -104,7 +106,7 @@ jobs:
           if [ "${gmajor:-0}" -ge 9 ] && [ "$build_java" -lt 25 ]; then build_java=25; fi
           gv='${{ steps.cfg.outputs.game_versions }}'
           {
-            echo "version=$version"; echo "loader=$loader"; echo "mc=$mc"; echo "tag=$tag"
+            echo "version=$version"; echo "title=$title"; echo "loader=$loader"; echo "mc=$mc"; echo "tag=$tag"
             echo "java=$java"; echo "build_java=$build_java"
             # one version per line: mc-publish reads a space-separated value as ONE version range
             # ("26.1 26.1.1" matches nothing, CurseForge then refuses the upload)
@@ -166,7 +168,7 @@ jobs:
           curseforge-id: ${{ steps.cfg.outputs.curseforge }}
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
           files: ${{ env.JAR }}
-          name: ${{ matrix.mod }} ${{ steps.meta.outputs.version }}
+          name: ${{ steps.meta.outputs.title }}
           version: ${{ steps.meta.outputs.version }}
           version-type: ${{ inputs.type }}
           loaders: ${{ steps.meta.outputs.loader }}
