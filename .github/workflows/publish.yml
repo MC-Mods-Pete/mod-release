@@ -97,12 +97,17 @@ jobs:
               *)                              java=25 ;;
             esac
           fi
+          # JDK for the build: Gradle 9 projects run on 25 (newer Fabric Loom needs JVM 25 to run).
+          # The jar target stays as set in build.gradle (release = …), so "java" for Modrinth/CurseForge does not change.
+          build_java=$java
+          gmajor=$(sed -nE 's/.*gradle-([0-9]+)\..*/\1/p' gradle/wrapper/gradle-wrapper.properties 2>/dev/null | head -1)
+          if [ "${gmajor:-0}" -ge 9 ] && [ "$build_java" -lt 25 ]; then build_java=25; fi
           gv='${{ steps.cfg.outputs.game_versions }}'
           {
             echo "version=$version"; echo "loader=$loader"; echo "mc=$mc"; echo "tag=$tag"
-            echo "java=$java"; echo "game_versions=${gv:-$mc}"
+            echo "java=$java"; echo "build_java=$build_java"; echo "game_versions=${gv:-$mc}"
           } >> "$GITHUB_OUTPUT"
-          echo "$MOD $version | Loader $loader | MC ${gv:-$mc} | Java $java | Tag $tag" >> "$GITHUB_STEP_SUMMARY"
+          echo "$MOD $version | Loader $loader | MC ${gv:-$mc} | Java $java (build $build_java) | Tag $tag" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Changelog
         id: log
@@ -128,7 +133,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: ${{ steps.meta.outputs.java }}
+          java-version: ${{ steps.meta.outputs.build_java }}
 
       - uses: gradle/actions/setup-gradle@v6
 
