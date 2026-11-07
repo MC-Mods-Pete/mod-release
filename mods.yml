@@ -4,6 +4,7 @@
 #   curseforge:  CurseForge project ID
 #   branches:    optional per branch: game_versions (all versions the jar is tested on) and/or java
 # Without game_versions the workflow uses minecraft_version from gradle.properties.
+# Always quote versions ("1.20"), unquoted 1.20 is a number and becomes 1.2.
 
 UndeadNights:
   repo: MC-Mods-Pete/UndeadNights
@@ -11,15 +12,24 @@ UndeadNights:
   curseforge: 1166914         # https://www.curseforge.com/minecraft/mc-mods/undead-nights
   branches:
     # Derived from the Prism instances that run these jars; check before the first release.
-    1.21-Fabric:      { game_versions: [1.21, 1.21.1] }
-    1.21-Forge:       { game_versions: [1.21, 1.21.1] }
-    1.21-NeoForge:    { game_versions: [1.21, 1.21.1] }
-    1.21.6-Fabric:    { game_versions: [1.21.6, 1.21.7, 1.21.8] }
-    1.21.6-Forge:     { game_versions: [1.21.6, 1.21.7, 1.21.8] }
-    1.21.6-NeoForge:  { game_versions: [1.21.6, 1.21.7, 1.21.8] }
-    1.21.9-Fabric:    { game_versions: [1.21.9, 1.21.10] }
-    1.21.9-Forge:     { game_versions: [1.21.9, 1.21.10] }
-    1.21.9-NeoForge:  { game_versions: [1.21.9, 1.21.10] }
-    26.1-Fabric:      { game_versions: [26.1, 26.1.1, 26.1.2] }
-    26.1-Forge:       { game_versions: [26.1, 26.1.1, 26.1.2] }
-    26.1-NeoForge:    { game_versions: [26.1, 26.1.1, 26.1.2] }
+    1.21-Fabric:      { game_versions: ["1.21", "1.21.1"] }
+    1.21-Forge:       { game_versions: ["1.21", "1.21.1"] }
+    1.21-NeoForge:    { game_versions: ["1.21", "1.21.1"] }
+    1.21.6-Fabric:    { game_versions: ["1.21.6", "1.21.7", "1.21.8"] }
+    1.21.6-Forge:     { game_versions: ["1.21.6", "1.21.7", "1.21.8"] }
+    1.21.6-NeoForge:  { game_versions: ["1.21.6", "1.21.7", "1.21.8"] }
+    1.21.9-Fabric:    { game_versions: ["1.21.9", "1.21.10"] }
+    1.21.9-Forge:     { game_versions: ["1.21.9", "1.21.10"] }
+    1.21.9-NeoForge:  { game_versions: ["1.21.9", "1.21.10"] }
+    26.1-Fabric:      { game_versions: ["26.1", "26.1.1", "26.1.2"] }
+    26.1-Forge:       { game_versions: ["26.1", "26.1.1", "26.1.2"] }
+    26.1-NeoForge:    { game_versions: ["26.1", "26.1.1", "26.1.2"] }
+
+EverlastingWinter:
+  repo: MC-Mods-Pete/EverlastingWinter
+  modrinth: 9fiQr9Gs          # https://modrinth.com/mod/everlasting-winter
+  curseforge: 1673484         # https://www.curseforge.com/minecraft/mc-mods/everlasting-winter (Project ID)
+  branches:
+    # From the 1.1.0 versions on Modrinth (2026-11-07); all other branches use minecraft_version.
+    26.1-Fabric:      { game_versions: ["26.1", "26.1.1", "26.1.2", "26.2", "26.3"] }
+    26.1-NeoForge:    { game_versions: ["26.1", "26.1.1", "26.1.2", "26.2"] }
