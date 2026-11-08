@@ -226,10 +226,12 @@ jobs:
           name: announce-${{ matrix.mod }}-${{ matrix.branch }}
           path: announce/
 
-  # One Discord message per mod with all published files, after all publish jobs (also if some failed).
+  # Discord: only if ALL targets of the run were published. One message per mod and version
+  # (x.y.z) with all files of that version, built from the release tags, so a later run that
+  # publishes the missing targets of a failed run posts the complete message.
   announce:
     needs: publish
-    if: ${{ always() && !inputs.dry_run && needs.publish.result != 'skipped' && needs.publish.result != 'cancelled' }}
+    if: ${{ !inputs.dry_run && needs.publish.result == 'success' }}
     runs-on: ubuntu-latest
     environment: release
     continue-on-error: true
@@ -243,4 +245,12 @@ jobs:
       - name: Post to Discord
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        run: python3 scripts/discord-announce.py announce
+          GH_TOKEN: ${{ secrets.RELEASE_PAT || github.token }}
+        run: |
+          yq -o json '.' mods.yml > "$RUNNER_TEMP/mods.json"
+          jq -r '"\(.mod) \(.version | split("-")[0]) \(.type)"' announce/*.json | sort -u |
+          while read -r mod version type; do
+            out="$RUNNER_TEMP/announce-$mod-$version"
+            python3 scripts/announce-from-tags.py "$RUNNER_TEMP/mods.json" "$mod" "$version" "$out" --type "$type"
+            python3 scripts/discord-announce.py "$out"
+          done

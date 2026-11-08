@@ -1,0 +1,40 @@
+# Posts the Discord message for a mod version again, built from the release tags (all files of the version).
+# Started by "mc-release --announce Mod x.y.z" or by hand: Actions → Announce → Run workflow.
+name: Announce
+
+on:
+  workflow_dispatch:
+    inputs:
+      mod:
+        description: Mod as in mods.yml, e.g. EverlastingWinter
+        required: true
+      version:
+        description: Mod version without loader and MC, e.g. 1.1.1
+        required: true
+      type:
+        description: Release type
+        type: choice
+        options: [release, beta, alpha]
+        default: release
+
+permissions:
+  contents: read
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v7
+      - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          GH_TOKEN: ${{ secrets.RELEASE_PAT || github.token }}
+          MOD: ${{ inputs.mod }}
+          VERSION: ${{ inputs.version }}
+          TYPE: ${{ inputs.type }}
+        run: |
+          yq -o json '.' mods.yml > "$RUNNER_TEMP/mods.json"
+          out="$RUNNER_TEMP/announce"
+          python3 scripts/announce-from-tags.py "$RUNNER_TEMP/mods.json" "$MOD" "$VERSION" "$out" --type "$TYPE"
+          python3 scripts/discord-announce.py "$out"
