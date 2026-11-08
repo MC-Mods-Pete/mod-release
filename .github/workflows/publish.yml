@@ -133,6 +133,13 @@ jobs:
             last=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
             text=$(git log --no-merges --pretty='- %s' ${last:+$last..HEAD})
           fi
+          # changelog.txt -> Markdown for Modrinth, CurseForge and Discord: "Fixes" -> "**Fixes**" with a blank line
+          # before it, " - x" -> "- x". Without the blank line Markdown glues the next heading to the last list item.
+          text=$(printf '%s\n' "$text" | awk '
+            /^[[:space:]]*$/ { next }
+            /^[[:space:]]*[-*•][[:space:]]+/ { sub(/^[[:space:]]*[-*•][[:space:]]+/, "- "); print; next }
+            /^[A-Z][A-Za-z ]*:?[[:space:]]*$/ { if (n++) print ""; sub(/[[:space:]]+$/, ""); print "**" $0 "**"; next }
+            { print }')
           { echo "text<<EOF_CHANGELOG"; echo "$text"; echo "EOF_CHANGELOG"; } >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-java@v6
@@ -188,3 +195,52 @@ jobs:
           git config user.email "MC-Mods-Pete@users.noreply.github.com"
           git tag -a "$TAG" -m "$MOD ${TAG#v}" -m "Modrinth: $MR" -m "CurseForge: $CF"
           git push origin "$TAG"
+
+      - name: Announcement data
+        if: ${{ !inputs.dry_run }}
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          TITLE: ${{ steps.meta.outputs.title }}
+          TYPE: ${{ inputs.type }}
+          GV: ${{ steps.meta.outputs.game_versions }}
+          MID: ${{ steps.cfg.outputs.modrinth }}
+          CFID: ${{ steps.cfg.outputs.curseforge }}
+          MR: ${{ steps.up.outputs.modrinth-url }}
+          CF: ${{ steps.up.outputs.curseforge-url }}
+          REPO: ${{ steps.cfg.outputs.repo }}
+          CHANGELOG: ${{ steps.log.outputs.text }}
+        run: |
+          mkdir -p announce
+          jq -n --arg mod "$MOD" --arg branch "$BRANCH" --arg version "$VERSION" --arg title "$TITLE" \
+            --arg type "$TYPE" --arg gv "$GV" --arg mid "$MID" --arg cfid "$CFID" --arg mr "$MR" --arg cf "$CF" \
+            --arg repo "$REPO" --arg changelog "$CHANGELOG" \
+            '{mod: $mod, branch: $branch, version: $version, title: $title, type: $type,
+              game_versions: ($gv | split("\n") | map(select(. != ""))), modrinth_id: $mid, curseforge_id: $cfid,
+              modrinth_url: $mr, curseforge_url: $cf, repo: $repo, changelog: $changelog}' \
+            > "announce/$MOD@$BRANCH.json"
+
+      - name: Upload announcement data
+        if: ${{ !inputs.dry_run }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: announce-${{ matrix.mod }}-${{ matrix.branch }}
+          path: announce/
+
+  # One Discord message per mod with all published files, after all publish jobs (also if some failed).
+  announce:
+    needs: publish
+    if: ${{ always() && !inputs.dry_run && needs.publish.result != 'skipped' && needs.publish.result != 'cancelled' }}
+    runs-on: ubuntu-latest
+    environment: release
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: announce-*
+          merge-multiple: true
+          path: announce
+      - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: python3 scripts/discord-announce.py announce

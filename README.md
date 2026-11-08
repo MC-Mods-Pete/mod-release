@@ -35,6 +35,7 @@ Environment **`release`** (Settings → Environments) with these secrets:
 | `MODRINTH_TOKEN` | Modrinth PAT, scope "Create versions" only |
 | `CURSEFORGE_TOKEN` | CurseForge API token |
 | `RELEASE_PAT` | Fine-grained GitHub token, owner MC-Mods-Pete, all mod repos, **Contents: read and write** (for the tags) |
+| `DISCORD_WEBHOOK` | Optional. Discord webhook URL (channel settings → Integrations → Webhooks). After a real run the job `announce` posts one message per mod with all published files (`scripts/discord-announce.py`). Without it the message is only printed in the log. |
 
 A dry run works without secrets.
 
