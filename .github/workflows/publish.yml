@@ -164,6 +164,13 @@ jobs:
           echo "JAR=mod/$jar" >> "$GITHUB_ENV"
           echo "Jar: $jar" >> "$GITHUB_STEP_SUMMARY"
 
+      # The jar's Minecraft range must match the published game versions (mods.yml or minecraft_version),
+      # otherwise players get a jar that does not load, or do not find it for a version it supports.
+      - name: Check game versions
+        env:
+          GV: ${{ steps.meta.outputs.game_versions }}
+        run: python3 release/scripts/check-game-versions.py "$JAR" "$GV"
+
       - name: Upload jar as artifact
         uses: actions/upload-artifact@v7
         with:
