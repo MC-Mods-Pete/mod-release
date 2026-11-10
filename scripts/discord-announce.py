@@ -87,9 +87,10 @@ def embed_for(mod, items):
     mr_project = f"https://modrinth.com/mod/{proj.get('slug') or first['modrinth_id']}"
     cf_project = next((i["curseforge_url"].split("/files/")[0] for i in items if i.get("curseforge_url")), "")
 
-    # one line per file, in the message text (fields allow only 1024 characters, the text 4096)
+    # one line per file. Discord: 4096 characters per embed text, 6000 for the whole message.
+    # Many files (e.g. 21) do not fit next to the changelog: then the list gets its own embed below.
     lines = [file_line(i) for i in items]
-    while len(lines) > 1 and sum(len(x) + 1 for x in lines) > 3000:
+    while len(lines) > 1 and sum(len(x) + 1 for x in lines) > 4000:
         lines = lines[:-2] + [f"… and {len(items) - len(lines) + 2} more files"]
     files_text = "**Files**\n" + "\n".join(lines)
     info = ["━━━━━━━"]
@@ -98,7 +99,11 @@ def embed_for(mod, items):
         info.append(f"**{downloads[0]}**: {downloads[1]:,}")
     info.append(f"**Type**: {first['type'].upper()}")
     info_text = "\n".join(info)
-    changelog = cut(first["changelog"].strip() or "No changelog.", 4000 - len(files_text) - len(info_text))
+    separate = len(files_text) + len(info_text) + len(first["changelog"]) > 3900
+    budget = 3900 - len(info_text) - (0 if separate else len(files_text))
+    if separate:   # whole message max 6000: links, title and files list come first
+        budget = min(budget, 5600 - len(files_text) - len(info_text) - 400)
+    changelog = cut(first["changelog"].strip() or "No changelog.", max(budget, 200))
     fields = []
     links = []
     if cf_project:
@@ -112,7 +117,7 @@ def embed_for(mod, items):
         "title": cut(f"New {name} {first['type'].upper()}: {short}", 256),
         "url": mr_project,
         # blank line before the separator, otherwise Markdown appends it to the last list item
-        "description": f"{changelog}\n\n{info_text}\n\n{files_text}",
+        "description": f"{changelog}\n\n{info_text}" + ("" if separate else f"\n\n{files_text}"),
         "color": COLORS.get(first["type"], COLORS["release"]),
         "fields": fields,
         "footer": {"text": f"{len(items)} {files} · CurseForge and Modrinth"},
@@ -120,7 +125,10 @@ def embed_for(mod, items):
     }
     if proj.get("icon_url"):
         embed["thumbnail"] = {"url": proj["icon_url"]}
-    return embed
+    if not separate:
+        return [embed]
+    footer = embed.pop("footer"); stamp = embed.pop("timestamp")
+    return [embed, {"description": files_text, "color": embed["color"], "footer": footer, "timestamp": stamp}]
 
 
 def main(folder):
@@ -135,7 +143,7 @@ def main(folder):
         by_mod.setdefault(i["mod"], []).append(i)
     hook = os.environ.get("DISCORD_WEBHOOK", "")
     for mod, its in sorted(by_mod.items()):
-        payload = {"embeds": [embed_for(mod, its)], "allowed_mentions": {"parse": []}}
+        payload = {"embeds": embed_for(mod, its), "allowed_mentions": {"parse": []}}
         if os.environ.get("DRY") or not hook:
             if not hook:
                 print("::notice::secret DISCORD_WEBHOOK not set, message only printed")
