@@ -105,14 +105,19 @@ jobs:
           gmajor=$(sed -nE 's/.*gradle-([0-9]+)\..*/\1/p' gradle/wrapper/gradle-wrapper.properties 2>/dev/null | head -1)
           if [ "${gmajor:-0}" -ge 9 ] && [ "$build_java" -lt 25 ]; then build_java=25; fi
           gv='${{ steps.cfg.outputs.game_versions }}'
+          # dependencies on Modrinth/CurseForge from mods.yml (branch first, then loader), mc-publish syntax.
+          # Empty: mc-publish reads them from the jar (works for Fabric; Forge/NeoForge mod IDs like
+          # cloth_config do not match the project slugs).
+          deps=$(LOADER=$loader yq -r '(.[strenv(MOD)].branches[strenv(BRANCH)].dependencies // .[strenv(MOD)].dependencies[strenv(LOADER)] // []) | .[]' ../release/mods.yml)
           {
             echo "version=$version"; echo "title=$title"; echo "loader=$loader"; echo "mc=$mc"; echo "tag=$tag"
             echo "java=$java"; echo "build_java=$build_java"
             # one version per line: mc-publish reads a space-separated value as ONE version range
             # ("26.1 26.1.1" matches nothing, CurseForge then refuses the upload)
             echo "game_versions<<EOF_GV"; printf '%s\n' ${gv:-$mc}; echo "EOF_GV"
+            echo "dependencies<<EOF_DEP"; [ -z "$deps" ] || echo "$deps"; echo "EOF_DEP"
           } >> "$GITHUB_OUTPUT"
-          echo "$MOD $version | Loader $loader | MC ${gv:-$mc} | Java $java (build $build_java) | Tag $tag" >> "$GITHUB_STEP_SUMMARY"
+          echo "$MOD $version | Loader $loader | MC ${gv:-$mc} | Java $java (build $build_java) | Tag $tag | Dependencies: ${deps:-from the jar}" | tr '\n' ' ' >> "$GITHUB_STEP_SUMMARY"; echo >> "$GITHUB_STEP_SUMMARY"
 
       - name: Changelog
         id: log
@@ -167,7 +172,7 @@ jobs:
 
       - name: Publish to Modrinth and CurseForge
         id: up
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && steps.meta.outputs.dependencies == '' }}
         uses: Kir-Antipov/mc-publish@v3.3
         with:
           modrinth-id: ${{ steps.cfg.outputs.modrinth }}
@@ -183,13 +188,32 @@ jobs:
           java: ${{ steps.meta.outputs.java }}
           changelog: ${{ steps.log.outputs.text }}
 
+      - name: Publish to Modrinth and CurseForge (dependencies from mods.yml)
+        id: up_deps
+        if: ${{ !inputs.dry_run && steps.meta.outputs.dependencies != '' }}
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: ${{ steps.cfg.outputs.modrinth }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          curseforge-id: ${{ steps.cfg.outputs.curseforge }}
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          files: ${{ env.JAR }}
+          name: ${{ steps.meta.outputs.title }}
+          version: ${{ steps.meta.outputs.version }}
+          version-type: ${{ inputs.type }}
+          loaders: ${{ steps.meta.outputs.loader }}
+          game-versions: ${{ steps.meta.outputs.game_versions }}
+          java: ${{ steps.meta.outputs.java }}
+          changelog: ${{ steps.log.outputs.text }}
+          dependencies: ${{ steps.meta.outputs.dependencies }}
+
       - name: Create tag
         if: ${{ !inputs.dry_run }}
         working-directory: mod
         env:
           TAG: ${{ steps.meta.outputs.tag }}
-          MR: ${{ steps.up.outputs.modrinth-url }}
-          CF: ${{ steps.up.outputs.curseforge-url }}
+          MR: ${{ steps.up.outputs.modrinth-url || steps.up_deps.outputs.modrinth-url }}
+          CF: ${{ steps.up.outputs.curseforge-url || steps.up_deps.outputs.curseforge-url }}
         run: |
           git config user.name "MC-Mods-Pete"
           git config user.email "MC-Mods-Pete@users.noreply.github.com"
@@ -205,8 +229,8 @@ jobs:
           GV: ${{ steps.meta.outputs.game_versions }}
           MID: ${{ steps.cfg.outputs.modrinth }}
           CFID: ${{ steps.cfg.outputs.curseforge }}
-          MR: ${{ steps.up.outputs.modrinth-url }}
-          CF: ${{ steps.up.outputs.curseforge-url }}
+          MR: ${{ steps.up.outputs.modrinth-url || steps.up_deps.outputs.modrinth-url }}
+          CF: ${{ steps.up.outputs.curseforge-url || steps.up_deps.outputs.curseforge-url }}
           REPO: ${{ steps.cfg.outputs.repo }}
           CHANGELOG: ${{ steps.log.outputs.text }}
         run: |

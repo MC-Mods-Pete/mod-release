@@ -3,6 +3,10 @@
 #   modrinth:    Modrinth project ID
 #   curseforge:  CurseForge project ID
 #   branches:    optional per branch: game_versions (all versions the jar is tested on) and/or java
+#   dependencies: optional per loader (fabric, forge, neoforge) or per branch: dependencies on Modrinth and
+#                CurseForge in mc-publish syntax, e.g. "cloth-config(required)", "modmenu(optional)".
+#                The name is the project slug on both sites. Without it mc-publish reads the dependencies from
+#                the jar: fine for Fabric, but Forge/NeoForge mod IDs like cloth_config match no project.
 # Without game_versions the workflow uses minecraft_version from gradle.properties.
 # Always quote versions ("1.20"), unquoted 1.20 is a number and becomes 1.2.
 
