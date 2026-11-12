@@ -75,3 +75,24 @@ DayCount:
     26.1-Fabric:      { game_versions: ["26.1", "26.1.1", "26.1.2", "26.2"] }
     26.1-Forge:       { game_versions: ["26.1", "26.1.1", "26.1.2", "26.2"] }
     26.1-NeoForge:    { game_versions: ["26.1", "26.1.1", "26.1.2", "26.2"] }
+
+VikingArmorWeapons:
+  repo: MC-Mods-Pete/VikingArmorWeapons
+  modrinth: ZpOv0Orc          # Modrinth project ID
+  curseforge: 1550032         # CurseForge project ID
+  branches:
+    # From the version ranges in the jars of 1.1.0 (2026-11-12); all other branches use minecraft_version.
+    # Open: 1.20.1-Fabric (~1.20.1 = 1.20.1-1.20.6) and 1.21.1-Fabric (~1.21.1 = 1.21.1-1.21.11),
+    # either list those versions here or narrow the range in the jar.
+    1.19.2-Forge:     { game_versions: ["1.19.2", "1.19.3", "1.19.4"] }
+    26.1.2-Fabric:    { game_versions: ["26.1", "26.1.1", "26.1.2"] }
+    26.1.2-NeoForge:  { game_versions: ["26.1", "26.1.1", "26.1.2"] }
+
+KnightArmorWeapons:
+  repo: MC-Mods-Pete/KnightArmorWeapons
+  modrinth: 3CliBIfd          # Modrinth project ID
+  curseforge: 1563034         # CurseForge project ID
+  branches:
+    # From the version ranges in the jars (2026-11-12); 1.20.1-Forge uses minecraft_version.
+    # Open: 1.20.1-Fabric (~1.20 = 1.20-1.20.6), list them here or narrow the range in the jar.
+    1.19.2-Forge:     { game_versions: ["1.19.2", "1.19.3", "1.19.4"] }

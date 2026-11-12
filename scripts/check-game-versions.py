@@ -64,9 +64,9 @@ def fabric_term(term, v):
     if op == "<=": return a <= b
     if op == ">": return a > b
     if op == "<": return a < b
-    if op == "~":                                        # ~1.21 = >=1.21 <1.22, ~1.21.1 = >=1.21.1 <1.22
+    if op == "~":                                        # ~1.21 and ~1.21.1: <1.22, ~26.1: <26.2, ~1: <2
         n = len(re.findall(r"\d+", ver))
-        upper = list(b[:max(n - 1, 1)]); upper[-1] += 1
+        upper = list(b[:2 if n >= 2 else 1]); upper[-1] += 1
         return a >= b and a < tuple(upper + [0] * (4 - len(upper)))
     if op == "^":
         return a >= b and a[0] == b[0]
