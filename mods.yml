@@ -40,3 +40,23 @@ KnightArmorWeapons:
   repo: MC-Mods-Pete/KnightArmorWeapons
   modrinth: 3CliBIfd          # Modrinth project ID
   curseforge: 1563034         # CurseForge project ID
+
+GildedBlackstoneBlocks:
+  repo: MC-Mods-Pete/GildedBlackstoneBlocks
+  modrinth: kjmPosSi          # Modrinth project ID
+  curseforge: 1350654         # CurseForge project ID
+  dependencies:
+    fabric:                   # explicit: fabric.mod.json still suggests the MDK placeholder "another-mod"
+      - "fabric-api(required)"
+      - "cloth-config(required)"
+      - "modmenu(optional)"
+
+ApocalypseDrops:
+  repo: MC-Mods-Pete/ApocalypseDrops
+  modrinth: onIPcQeK          # Modrinth project ID
+  curseforge: 1029186         # CurseForge project ID
+  dependencies:
+    fabric:                   # explicit: fabric.mod.json still suggests the MDK placeholder "another-mod"
+      - "fabric-api(required)"
+      - "cloth-config(required)"
+      - "modmenu(optional)"
