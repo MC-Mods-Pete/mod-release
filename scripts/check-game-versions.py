@@ -2,6 +2,10 @@
 """Compares the Minecraft versions a jar declares with the game versions that will be published.
 
   check-game-versions.py JAR "VERSION VERSION ..."      (versions separated by spaces or newlines)
+  check-game-versions.py --derive JAR                   print the versions the jar allows, one per line
+
+--derive is used when mods.yml has no game_versions for a branch: the jar's own range decides.
+Exit 1 if the range cannot be read (no metadata, placeholder, Mojang list not reachable).
 
 Reads the Minecraft dependency from the jar (fabric.mod.json "depends.minecraft", or the "minecraft"
 dependency in META-INF/mods.toml / META-INF/neoforge.mods.toml), expands it against the list of
@@ -135,7 +139,32 @@ def jar_requirement(jar):
     return None, None
 
 
+def derive(jar):
+    kind, req = jar_requirement(jar)
+    if not kind:
+        note("error", f"no Minecraft dependency found in {os.path.basename(jar)}")
+        return 1
+    if "${" in json.dumps(req):
+        note("error", f"unresolved placeholder in the jar's Minecraft dependency: {req}")
+        return 1
+    try:
+        known = releases()
+    except Exception as e:
+        note("error", f"Minecraft version list not reachable ({e})")
+        return 1
+    allows = (lambda v: fabric_allows(req, v)) if kind == "fabric" else (lambda v: maven_allows(req, v))
+    found = sorted((v for v in known if allows(v)), key=vt)
+    if not found:
+        note("error", f"the jar's range {req} matches no Minecraft release")
+        return 1
+    print(f"jar requires minecraft {json.dumps(req) if kind == 'fabric' else req} -> {', '.join(found)}", file=sys.stderr)
+    print("\n".join(found))
+    return 0
+
+
 def main(argv):
+    if len(argv) == 2 and argv[0] == "--derive":
+        return derive(argv[1])
     if len(argv) != 2:
         print(__doc__, file=sys.stderr)
         return 2

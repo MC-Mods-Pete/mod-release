@@ -2,97 +2,41 @@
 #   repo:        GitHub repo with one branch per Minecraft version and loader
 #   modrinth:    Modrinth project ID
 #   curseforge:  CurseForge project ID
-#   branches:    optional per branch: game_versions (all versions the jar is tested on) and/or java
+#   branches:    optional per branch: java, dependencies, or game_versions as an override. Normally the
+#                game versions come from the jar's own Minecraft range (fabric.mod.json / mods.toml).
 #   dependencies: optional per loader (fabric, forge, neoforge) or per branch: dependencies on Modrinth and
 #                CurseForge in mc-publish syntax, e.g. "cloth-config(required)", "modmenu(optional)".
 #                The name is the project slug on both sites. Without it mc-publish reads the dependencies from
 #                the jar: fine for Fabric, but Forge/NeoForge mod IDs like cloth_config match no project.
-# Without game_versions the workflow uses minecraft_version from gradle.properties.
+# An explicit game_versions list must match the jar's range, otherwise the workflow stops.
 # Always quote versions ("1.20"), unquoted 1.20 is a number and becomes 1.2.
 
 UndeadNights:
   repo: MC-Mods-Pete/UndeadNights
   modrinth: g0mmcQV2          # https://modrinth.com/mod/undead-nights
   curseforge: 1166914         # https://www.curseforge.com/minecraft/mc-mods/undead-nights
-  branches:
-    # Derived from the Prism instances that run these jars; check before the first release.
-    1.21-Fabric:      { game_versions: ["1.21", "1.21.1"] }
-    1.21-Forge:       { game_versions: ["1.21", "1.21.1"] }
-    1.21-NeoForge:    { game_versions: ["1.21", "1.21.1"] }
-    1.21.6-Fabric:    { game_versions: ["1.21.6", "1.21.7", "1.21.8"] }
-    1.21.6-Forge:     { game_versions: ["1.21.6", "1.21.7", "1.21.8"] }
-    1.21.6-NeoForge:  { game_versions: ["1.21.6", "1.21.7", "1.21.8"] }
-    1.21.9-Fabric:    { game_versions: ["1.21.9", "1.21.10"] }
-    1.21.9-Forge:     { game_versions: ["1.21.9", "1.21.10"] }
-    1.21.9-NeoForge:  { game_versions: ["1.21.9", "1.21.10"] }
-    26.1-Fabric:      { game_versions: ["26.1", "26.1.1", "26.1.2"] }
-    26.1-Forge:       { game_versions: ["26.1", "26.1.1", "26.1.2"] }
-    26.1-NeoForge:    { game_versions: ["26.1", "26.1.1", "26.1.2"] }
 
 EverlastingWinter:
   repo: MC-Mods-Pete/EverlastingWinter
   modrinth: 9fiQr9Gs          # https://modrinth.com/mod/everlasting-winter
   curseforge: 1673484         # https://www.curseforge.com/minecraft/mc-mods/everlasting-winter (Project ID)
-  branches:
-    # From the 1.1.0 versions on Modrinth (2026-11-07); all other branches use minecraft_version.
-    26.1-Fabric:      { game_versions: ["26.1", "26.1.1", "26.1.2", "26.2", "26.3"] }
-    26.1-NeoForge:    { game_versions: ["26.1", "26.1.1", "26.1.2", "26.2"] }
 
 HardcoreLite:
   repo: MC-Mods-Pete/HardcoreLite
   modrinth: UopFqYzZ          # https://modrinth.com/mod/hardcore-lite
   curseforge: 1337481         # CurseForge project ID
-  branches:
-    # From the versions on Modrinth (2026-11-09); all other branches use minecraft_version.
-    1.21-Fabric:      { game_versions: ["1.21", "1.21.1"] }
-    1.21-Forge:       { game_versions: ["1.21", "1.21.1"] }
-    1.21-NeoForge:    { game_versions: ["1.21", "1.21.1"] }
-    1.21.6-Fabric:    { game_versions: ["1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10"] }
-    1.21.6-NeoForge:  { game_versions: ["1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10"] }
-    26.1-Fabric:      { game_versions: ["26.1", "26.1.1", "26.1.2", "26.2", "26.3"] }
-    26.1-NeoForge:    { game_versions: ["26.1", "26.1.1", "26.1.2", "26.2", "26.3"] }
 
 DayCount:
   repo: MC-Mods-Pete/DayCount
   modrinth: kexckXV1          # Modrinth project ID
   curseforge: 1233297         # CurseForge project ID
-  branches:
-    # From the version ranges in the jars of 1.6.1 (2026-11-10); 1.21.11 and 26.3 use minecraft_version.
-    1.19-Fabric:      { game_versions: ["1.19", "1.19.1", "1.19.2", "1.19.3", "1.19.4"] }
-    1.19-Forge:       { game_versions: ["1.19", "1.19.1", "1.19.2", "1.19.3", "1.19.4"] }
-    1.20-Fabric:      { game_versions: ["1.20", "1.20.1"] }
-    1.20.2-Fabric:    { game_versions: ["1.20.2", "1.20.3", "1.20.4", "1.20.5", "1.20.6"] }
-    1.20-Forge:       { game_versions: ["1.20", "1.20.1", "1.20.2", "1.20.3", "1.20.4"] }
-    1.21-Fabric:      { game_versions: ["1.21", "1.21.1", "1.21.2", "1.21.3", "1.21.4", "1.21.5"] }
-    1.21-Forge:       { game_versions: ["1.20.6", "1.21", "1.21.1", "1.21.2", "1.21.3", "1.21.4", "1.21.5"] }
-    1.21-NeoForge:    { game_versions: ["1.21", "1.21.1", "1.21.2", "1.21.3", "1.21.4", "1.21.5"] }
-    1.21.6-Fabric:    { game_versions: ["1.21.6", "1.21.7", "1.21.8"] }
-    1.21.6-Forge:     { game_versions: ["1.21.6", "1.21.7", "1.21.8"] }
-    1.21.6-NeoForge:  { game_versions: ["1.21.6", "1.21.7", "1.21.8"] }
-    1.21.9-Fabric:    { game_versions: ["1.21.9", "1.21.10", "1.21.11"] }
-    1.21.9-Forge:     { game_versions: ["1.21.9", "1.21.10"] }
-    1.21.9-NeoForge:  { game_versions: ["1.21.9", "1.21.10"] }
-    26.1-Fabric:      { game_versions: ["26.1", "26.1.1", "26.1.2", "26.2"] }
-    26.1-Forge:       { game_versions: ["26.1", "26.1.1", "26.1.2", "26.2"] }
-    26.1-NeoForge:    { game_versions: ["26.1", "26.1.1", "26.1.2", "26.2"] }
 
 VikingArmorWeapons:
   repo: MC-Mods-Pete/VikingArmorWeapons
   modrinth: ZpOv0Orc          # Modrinth project ID
   curseforge: 1550032         # CurseForge project ID
-  branches:
-    # From the version ranges in the jars of 1.1.0 (2026-11-12); all other branches use minecraft_version.
-    # Open: 1.20.1-Fabric (~1.20.1 = 1.20.1-1.20.6) and 1.21.1-Fabric (~1.21.1 = 1.21.1-1.21.11),
-    # either list those versions here or narrow the range in the jar.
-    1.19.2-Forge:     { game_versions: ["1.19.2", "1.19.3", "1.19.4"] }
-    26.1.2-Fabric:    { game_versions: ["26.1", "26.1.1", "26.1.2"] }
-    26.1.2-NeoForge:  { game_versions: ["26.1", "26.1.1", "26.1.2"] }
 
 KnightArmorWeapons:
   repo: MC-Mods-Pete/KnightArmorWeapons
   modrinth: 3CliBIfd          # Modrinth project ID
   curseforge: 1563034         # CurseForge project ID
-  branches:
-    # From the version ranges in the jars (2026-11-12); 1.20.1-Forge uses minecraft_version.
-    # Open: 1.20.1-Fabric (~1.20 = 1.20-1.20.6), list them here or narrow the range in the jar.
-    1.19.2-Forge:     { game_versions: ["1.19.2", "1.19.3", "1.19.4"] }

@@ -112,12 +112,10 @@ jobs:
           {
             echo "version=$version"; echo "title=$title"; echo "loader=$loader"; echo "mc=$mc"; echo "tag=$tag"
             echo "java=$java"; echo "build_java=$build_java"
-            # one version per line: mc-publish reads a space-separated value as ONE version range
-            # ("26.1 26.1.1" matches nothing, CurseForge then refuses the upload)
-            echo "game_versions<<EOF_GV"; printf '%s\n' ${gv:-$mc}; echo "EOF_GV"
+            echo "gv_config=$gv"     # game_versions from mods.yml, empty = take them from the jar
             echo "dependencies<<EOF_DEP"; [ -z "$deps" ] || echo "$deps"; echo "EOF_DEP"
           } >> "$GITHUB_OUTPUT"
-          echo "$MOD $version | Loader $loader | MC ${gv:-$mc} | Java $java (build $build_java) | Tag $tag | Dependencies: ${deps:-from the jar}" | tr '\n' ' ' >> "$GITHUB_STEP_SUMMARY"; echo >> "$GITHUB_STEP_SUMMARY"
+          echo "$MOD $version | Loader $loader | MC ${gv:-from the jar} | Java $java (build $build_java) | Tag $tag | Dependencies: ${deps:-from the jar}" | tr '\n' ' ' >> "$GITHUB_STEP_SUMMARY"; echo >> "$GITHUB_STEP_SUMMARY"
 
       - name: Changelog
         id: log
@@ -164,12 +162,23 @@ jobs:
           echo "JAR=mod/$jar" >> "$GITHUB_ENV"
           echo "Jar: $jar" >> "$GITHUB_STEP_SUMMARY"
 
-      # The jar's Minecraft range must match the published game versions (mods.yml or minecraft_version),
-      # otherwise players get a jar that does not load, or do not find it for a version it supports.
-      - name: Check game versions
+      # Game versions come from the jar's Minecraft range (fabric.mod.json / mods.toml), expanded against
+      # Mojang's list of releases. mods.yml game_versions is only an override and must then match the jar.
+      - name: Game versions
+        id: gv
         env:
-          GV: ${{ steps.meta.outputs.game_versions }}
-        run: python3 release/scripts/check-game-versions.py "$JAR" "$GV"
+          GV_CONFIG: ${{ steps.meta.outputs.gv_config }}
+          MC: ${{ steps.meta.outputs.mc }}
+        run: |
+          if [ -n "$GV_CONFIG" ]; then
+            python3 release/scripts/check-game-versions.py "$JAR" "$GV_CONFIG"
+            gv="$GV_CONFIG"; src="mods.yml"
+          else
+            gv=$(python3 release/scripts/check-game-versions.py --derive "$JAR"); src="the jar"
+          fi
+          # one version per line: mc-publish reads a space-separated value as ONE version range
+          { echo "game_versions<<EOF_GV"; printf '%s\n' $gv; echo "EOF_GV"; } >> "$GITHUB_OUTPUT"
+          echo "Game versions (from $src): $(echo $gv)" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload jar as artifact
         uses: actions/upload-artifact@v7
@@ -191,7 +200,7 @@ jobs:
           version: ${{ steps.meta.outputs.version }}
           version-type: ${{ inputs.type }}
           loaders: ${{ steps.meta.outputs.loader }}
-          game-versions: ${{ steps.meta.outputs.game_versions }}
+          game-versions: ${{ steps.gv.outputs.game_versions }}
           java: ${{ steps.meta.outputs.java }}
           changelog: ${{ steps.log.outputs.text }}
 
@@ -209,7 +218,7 @@ jobs:
           version: ${{ steps.meta.outputs.version }}
           version-type: ${{ inputs.type }}
           loaders: ${{ steps.meta.outputs.loader }}
-          game-versions: ${{ steps.meta.outputs.game_versions }}
+          game-versions: ${{ steps.gv.outputs.game_versions }}
           java: ${{ steps.meta.outputs.java }}
           changelog: ${{ steps.log.outputs.text }}
           dependencies: ${{ steps.meta.outputs.dependencies }}
@@ -219,12 +228,13 @@ jobs:
         working-directory: mod
         env:
           TAG: ${{ steps.meta.outputs.tag }}
+          GV: ${{ steps.gv.outputs.game_versions }}
           MR: ${{ steps.up.outputs.modrinth-url || steps.up_deps.outputs.modrinth-url }}
           CF: ${{ steps.up.outputs.curseforge-url || steps.up_deps.outputs.curseforge-url }}
         run: |
           git config user.name "MC-Mods-Pete"
           git config user.email "MC-Mods-Pete@users.noreply.github.com"
-          git tag -a "$TAG" -m "$MOD ${TAG#v}" -m "Modrinth: $MR" -m "CurseForge: $CF"
+          git tag -a "$TAG" -m "$MOD ${TAG#v}" -m "Modrinth: $MR" -m "CurseForge: $CF" -m "Game versions: $(echo $GV)"
           git push origin "$TAG"
 
       - name: Announcement data
@@ -233,7 +243,7 @@ jobs:
           VERSION: ${{ steps.meta.outputs.version }}
           TITLE: ${{ steps.meta.outputs.title }}
           TYPE: ${{ inputs.type }}
-          GV: ${{ steps.meta.outputs.game_versions }}
+          GV: ${{ steps.gv.outputs.game_versions }}
           MID: ${{ steps.cfg.outputs.modrinth }}
           CFID: ${{ steps.cfg.outputs.curseforge }}
           MR: ${{ steps.up.outputs.modrinth-url || steps.up_deps.outputs.modrinth-url }}

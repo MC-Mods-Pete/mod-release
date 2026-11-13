@@ -106,7 +106,10 @@ def main(argv):
         branch = branch_of(repo, tag, m.group(2))
         props = git(repo, "show", f"{tag}:gradle.properties")
         mc = re.search(r"^\s*minecraft_version\s*=\s*(\S+)", props, re.M)
-        gv = ((cfg.get("branches") or {}).get(branch) or {}).get("game_versions") or [mc.group(1) if mc else m.group(3)]
+        tag_gv = re.search(r"Game versions: (.+)", msg)          # written by publish.yml since 2026-11-13
+        gv = (tag_gv.group(1).split() if tag_gv else None) \
+            or ((cfg.get("branches") or {}).get(branch) or {}).get("game_versions") \
+            or [mc.group(1) if mc else m.group(3)]
         try:
             changelog = changelog_md(git(repo, "show", f"{tag}:changelog.txt"), full)
         except subprocess.CalledProcessError:
