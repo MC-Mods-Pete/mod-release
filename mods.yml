@@ -60,3 +60,13 @@ ApocalypseDrops:
       - "fabric-api(required)"
       - "cloth-config(required)"
       - "modmenu(optional)"
+
+Contagion:
+  repo: MC-Mods-Pete/Contagion
+  modrinth: c3Ja659P          # Modrinth project ID
+  curseforge: 1027702         # CurseForge project ID
+  dependencies:
+    fabric:                   # explicit: fabric.mod.json still suggests the MDK placeholder "another-mod"
+      - "fabric-api(required)"
+      - "cloth-config(required)"
+      - "modmenu(optional)"
