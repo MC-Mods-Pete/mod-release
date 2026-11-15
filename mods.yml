@@ -70,3 +70,8 @@ Contagion:
       - "fabric-api(required)"
       - "cloth-config(required)"
       - "modmenu(optional)"
+
+WarpedBlocks:
+  repo: MC-Mods-Pete/WarpedBlocks
+  modrinth: qzbdWs22          # Modrinth project ID
+  curseforge: 1350142         # CurseForge project ID
