@@ -75,3 +75,13 @@ WarpedBlocks:
   repo: MC-Mods-Pete/WarpedBlocks
   modrinth: qzbdWs22          # Modrinth project ID
   curseforge: 1350142         # CurseForge project ID
+
+MutantsZombies:
+  repo: MC-Mods-Pete/MutantsZombies
+  modrinth: W0C544GP          # Modrinth project ID
+  curseforge: 1204883         # CurseForge project ID
+  dependencies:
+    fabric:                   # explicit: fabric.mod.json still suggests the MDK placeholder "another-mod"
+      - "fabric-api(required)"
+      - "cloth-config(required)"
+      - "modmenu(optional)"
