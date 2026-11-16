@@ -16,6 +16,10 @@ on:
         type: choice
         options: [release, beta, alpha]
         default: release
+      notes:
+        description: 'Optional. Discord text as JSON {"Mod x.y.z": "Markdown"} (mc-release: section of changelog.txt in the mod root)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -33,6 +37,7 @@ jobs:
           MOD: ${{ inputs.mod }}
           VERSION: ${{ inputs.version }}
           TYPE: ${{ inputs.type }}
+          RELEASE_NOTES: ${{ inputs.notes }}
         run: |
           yq -o json '.' mods.yml > "$RUNNER_TEMP/mods.json"
           out="$RUNNER_TEMP/announce"

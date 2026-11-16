@@ -18,6 +18,10 @@ on:
         description: Only build and check, upload nothing
         type: boolean
         default: true
+      notes:
+        description: 'Optional. Discord text as JSON {"Mod x.y.z": "Markdown"} (mc-release: section of changelog.txt in the mod root)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -287,6 +291,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           GH_TOKEN: ${{ secrets.RELEASE_PAT || github.token }}
+          RELEASE_NOTES: ${{ inputs.notes }}
         run: |
           yq -o json '.' mods.yml > "$RUNNER_TEMP/mods.json"
           jq -r '"\(.mod) \(.version | split("-")[0]) \(.type)"' announce/*.json | sort -u |

@@ -17,6 +17,9 @@ gh workflow run publish.yml -R MC-Mods-Pete/mod-release \
 - `targets`: `Mod@Branch`, several separated by spaces (one job each)
 - `type`: `release`, `beta` or `alpha`
 - `dry_run` (default `true`): build and check only, the jar is attached to the run as an artifact
+- `notes` (optional): text of the Discord message as JSON `{"Mod x.y.z": "Markdown"}`. `mc-release` fills it
+  with the section `x.y.z` of `changelog.txt` in the mod root (notes repo in Forgejo). Without it the message
+  shows the changelog of the newest file and points to the per-file changelogs on Modrinth/CurseForge.
 
 ## What a run checks
 
@@ -32,7 +35,7 @@ Environment **`release`** (Settings → Environments) with these secrets:
 
 | Secret | Content |
 |---|---|
-| `MODRINTH_TOKEN` | Modrinth PAT, scope "Create versions" only |
+| `MODRINTH_TOKEN` | Modrinth PAT, scopes "Create versions" and "Write versions" (mc-publish unfeatures older versions) |
 | `CURSEFORGE_TOKEN` | CurseForge API token |
 | `RELEASE_PAT` | Fine-grained GitHub token, owner MC-Mods-Pete, all mod repos, **Contents: read and write** (for the tags) |
 | `DISCORD_WEBHOOK` | Optional. Discord webhook URL (channel settings → Integrations → Webhooks). After a real run the job `announce` posts one message per mod with all published files (`scripts/discord-announce.py`). Without it the message is only printed in the log. |

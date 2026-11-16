@@ -4,7 +4,9 @@
 Input: a folder with one JSON file per published target (written by the publish jobs):
   {mod, branch, version, title, type, game_versions[], modrinth_id, curseforge_id, modrinth_url,
    curseforge_url, repo, changelog}
-Environment: DISCORD_WEBHOOK (without it nothing is posted, only printed), DRY=1 prints the payload.
+Environment: DISCORD_WEBHOOK (without it nothing is posted, only printed), DRY=1 prints the payload,
+RELEASE_NOTES (JSON {"Mod x.y.z": Markdown}, from mc-release): the text of the message. Without an entry
+for the mod and version the message shows the changelog of the newest file.
 """
 import glob
 import json
@@ -73,51 +75,33 @@ def file_line(i):
 
 
 
-def merged_changelog(items):
-    """One changelog for all files of the message. Each file has its own section in its branch's
-    changelog.txt; entries that only some files have get the files in brackets, e.g.
-    '- Supports 1.20 to 1.20.4 *(Fabric 1.20)*'. Identical changelogs stay as they are."""
-    logs = [(label(i), i.get("changelog", "").strip()) for i in items]
-    logs = [(lab, text) for lab, text in logs if text]
-    if not logs:
-        return ""
-    if len({text for _, text in logs}) == 1:
-        return logs[0][1]
-    order = [lab for lab, _ in logs]
-    norm = lambda t: re.sub(r"\s+", " ", t).strip()
-    sections, texts = {}, {}           # heading -> {key: set(labels)}, key -> text as written first
-    for lab, text in logs:
-        head = ""
-        for line in text.splitlines():
-            if not line.strip():
-                continue
-            m = re.match(r"^\*\*(.+?)\*\*\s*$", line.strip())
-            if m:
-                head = m.group(1)
-                sections.setdefault(head, {})
-                continue
-            entry = re.sub(r"^\s*[-*•]\s+", "", line)
-            key = norm(entry).lower()
-            sections.setdefault(head, {}).setdefault(key, set()).add(lab)
-            texts.setdefault(key, norm(entry))
-    out = []
-    for head, entries in sections.items():
-        if not entries:
-            continue
-        if head:
-            if out:
-                out.append("")
-            out.append(f"**{head}**")
-        for key, labs in entries.items():
-            line = f"- {texts[key]}"
-            if len(labs) < len(order):
-                missing = [l for l in order if l not in labs]
-                present = [l for l in order if l in labs]
-                note = (f"all except {', '.join(missing)}" if len(missing) < len(present) and len(missing) <= 3
-                        else ", ".join(present))
-                line += f" *({note})*"
-            out.append(line)
-    return "\n".join(out)
+NOTE_PER_FILE = "*Details per version: see the changelog of each file on Modrinth or CurseForge.*"
+
+
+def release_notes():
+    """RELEASE_NOTES (set by mc-release through the workflow input "notes"): JSON {"Mod x.y.z": Markdown},
+    the section x.y.z of changelog.txt in the mod root (notes repo in Forgejo)."""
+    try:
+        notes = json.loads(os.environ.get("RELEASE_NOTES") or "{}")
+        return notes if isinstance(notes, dict) else {}
+    except ValueError:
+        print("! RELEASE_NOTES is not valid JSON, ignored")
+        return {}
+
+
+def message_changelog(mod, items):
+    """Text of the Discord message: the release notes of the mod root if mc-release passed them,
+    otherwise the changelog of the newest file (items are sorted by Minecraft version), with a hint
+    if the files have different changelogs."""
+    version = items[0]["version"].split("-")[0]
+    text = (release_notes().get(f"{mod} {version}") or "").strip()
+    if text:
+        return text
+    logs = [i.get("changelog", "").strip() for i in items]
+    newest = next((log for log in reversed(logs) if log), "")
+    if newest and len({log for log in logs if log}) > 1:
+        return f"{newest}\n\n{NOTE_PER_FILE}"
+    return newest
 
 
 def embed_for(mod, items):
@@ -146,7 +130,7 @@ def embed_for(mod, items):
         info.append(f"**{downloads[0]}**: {downloads[1]:,}")
     info.append(f"**Type**: {first['type'].upper()}")
     info_text = "\n".join(info)
-    log = merged_changelog(items)
+    log = message_changelog(mod, items)
     separate = len(files_text) + len(info_text) + len(log) > 3900
     budget = 3900 - len(info_text) - (0 if separate else len(files_text))
     if separate:   # whole message max 6000: links, title and files list come first
