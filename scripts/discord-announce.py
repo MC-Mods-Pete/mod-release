@@ -73,6 +73,53 @@ def file_line(i):
 
 
 
+def merged_changelog(items):
+    """One changelog for all files of the message. Each file has its own section in its branch's
+    changelog.txt; entries that only some files have get the files in brackets, e.g.
+    '- Supports 1.20 to 1.20.4 *(Fabric 1.20)*'. Identical changelogs stay as they are."""
+    logs = [(label(i), i.get("changelog", "").strip()) for i in items]
+    logs = [(lab, text) for lab, text in logs if text]
+    if not logs:
+        return ""
+    if len({text for _, text in logs}) == 1:
+        return logs[0][1]
+    order = [lab for lab, _ in logs]
+    norm = lambda t: re.sub(r"\s+", " ", t).strip()
+    sections, texts = {}, {}           # heading -> {key: set(labels)}, key -> text as written first
+    for lab, text in logs:
+        head = ""
+        for line in text.splitlines():
+            if not line.strip():
+                continue
+            m = re.match(r"^\*\*(.+?)\*\*\s*$", line.strip())
+            if m:
+                head = m.group(1)
+                sections.setdefault(head, {})
+                continue
+            entry = re.sub(r"^\s*[-*•]\s+", "", line)
+            key = norm(entry).lower()
+            sections.setdefault(head, {}).setdefault(key, set()).add(lab)
+            texts.setdefault(key, norm(entry))
+    out = []
+    for head, entries in sections.items():
+        if not entries:
+            continue
+        if head:
+            if out:
+                out.append("")
+            out.append(f"**{head}**")
+        for key, labs in entries.items():
+            line = f"- {texts[key]}"
+            if len(labs) < len(order):
+                missing = [l for l in order if l not in labs]
+                present = [l for l in order if l in labs]
+                note = (f"all except {', '.join(missing)}" if len(missing) < len(present) and len(missing) <= 3
+                        else ", ".join(present))
+                line += f" *({note})*"
+            out.append(line)
+    return "\n".join(out)
+
+
 def embed_for(mod, items):
     # sorted by Minecraft version, then loader: Fabric 1.20.1, Forge 1.20.1, NeoForge 1.21.1, Fabric 26.1.2, …
     items.sort(key=lambda i: (vkey(label(i).split()[-1]), label(i).split()[0]))
@@ -99,11 +146,12 @@ def embed_for(mod, items):
         info.append(f"**{downloads[0]}**: {downloads[1]:,}")
     info.append(f"**Type**: {first['type'].upper()}")
     info_text = "\n".join(info)
-    separate = len(files_text) + len(info_text) + len(first["changelog"]) > 3900
+    log = merged_changelog(items)
+    separate = len(files_text) + len(info_text) + len(log) > 3900
     budget = 3900 - len(info_text) - (0 if separate else len(files_text))
     if separate:   # whole message max 6000: links, title and files list come first
         budget = min(budget, 5600 - len(files_text) - len(info_text) - 400)
-    changelog = cut(first["changelog"].strip() or "No changelog.", max(budget, 200))
+    changelog = cut(log or "No changelog.", max(budget, 200))
     fields = []
     links = []
     if cf_project:
