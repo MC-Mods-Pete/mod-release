@@ -85,3 +85,13 @@ MutantsZombies:
       - "fabric-api(required)"
       - "cloth-config(required)"
       - "modmenu(optional)"
+
+ZombifiedPlayer:
+  repo: MC-Mods-Pete/ZombifiedPlayer
+  modrinth: Hacodf0d          # Modrinth project ID
+  curseforge: 1075264         # CurseForge project ID
+  dependencies:
+    fabric:                   # explicit: fabric.mod.json still suggests the MDK placeholder "another-mod"
+      - "fabric-api(required)"
+      - "cloth-config(required)"
+      - "modmenu(optional)"
