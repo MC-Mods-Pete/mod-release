@@ -95,3 +95,19 @@ ZombifiedPlayer:
       - "fabric-api(required)"
       - "cloth-config(required)"
       - "modmenu(optional)"
+
+ZombifiedPlayerTrinkets:
+  repo: MC-Mods-Pete/ZombifiedPlayerTrinkets
+  modrinth: y7Owvuhv          # Zombified Player: Trinkets Compatibility
+  curseforge: 1648632
+  dependencies:
+    fabric:                   # explicit: fabric.mod.json still suggests the MDK placeholder "another-mod"
+      - "fabric-api(required)"  # TODO: Zombified Player and Trinkets as required (project slugs on both sites)
+
+ZombifiedPlayerAccessories:
+  repo: MC-Mods-Pete/ZombifiedPlayerAccessories
+  modrinth: Zdt8Vvw8          # Zombified Player: Accessories Compatibility
+  curseforge: 1650218
+  dependencies:
+    fabric:                   # explicit: fabric.mod.json still suggests the MDK placeholder "another-mod"
+      - "fabric-api(required)"  # TODO: Zombified Player and Accessories as required (project slugs on both sites)
