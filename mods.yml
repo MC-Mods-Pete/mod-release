@@ -102,7 +102,9 @@ ZombifiedPlayerTrinkets:
   curseforge: 1648632
   dependencies:
     fabric:                   # explicit: fabric.mod.json still suggests the MDK placeholder "another-mod"
-      - "fabric-api(required)"  # TODO: Zombified Player and Trinkets as required (project slugs on both sites)
+      - "fabric-api(required)"
+      - "zombified-player(required)"
+      # TODO: the Trinkets API as required, once its slug on Modrinth and CurseForge is known
 
 ZombifiedPlayerAccessories:
   repo: MC-Mods-Pete/ZombifiedPlayerAccessories
@@ -110,4 +112,6 @@ ZombifiedPlayerAccessories:
   curseforge: 1650218
   dependencies:
     fabric:                   # explicit: fabric.mod.json still suggests the MDK placeholder "another-mod"
-      - "fabric-api(required)"  # TODO: Zombified Player and Accessories as required (project slugs on both sites)
+      - "fabric-api(required)"
+      - "zombified-player(required)"
+      # TODO: the Accessories API as required, once its slug on Modrinth and CurseForge is known
